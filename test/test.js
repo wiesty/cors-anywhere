@@ -349,7 +349,7 @@ describe('Basic functionality', function() {
 
 describe('Proxy errors', function() {
   before(function() {
-    cors_anywhere = createServer();
+    cors_anywhere = createServer({allowPrivateIPs: true});
     cors_anywhere_port = cors_anywhere.listen(0).address().port;
   });
   after(stopServer);
@@ -449,8 +449,14 @@ describe('Proxy errors', function() {
       this.skip();
     }
 
-    var errorMessage = 'RangeError [ERR_HTTP_INVALID_STATUS_CODE]: Invalid status code: 0';
-    if (parseInt(process.versions.node, 10) < 9) {
+    var majorVersion = parseInt(process.versions.node, 10);
+    var errorMessage;
+    if (majorVersion >= 18) {
+      // Node.js 18+ uses llhttp which reports parse errors differently
+      errorMessage = 'Error: Parse Error: Invalid status code';
+    } else if (majorVersion >= 9) {
+      errorMessage = 'RangeError [ERR_HTTP_INVALID_STATUS_CODE]: Invalid status code: 0';
+    } else {
       errorMessage = 'RangeError: Invalid status code: 0';
     }
     request(cors_anywhere)
@@ -460,12 +466,21 @@ describe('Proxy errors', function() {
   });
 
   it('Content-Encoding invalid body', function(done) {
-    // The HTTP status can't be changed because the headers have already been
-    // sent.
-    request(cors_anywhere)
-      .get('/' + bad_tcp_server_url)
-      .expect('Access-Control-Allow-Origin', '*')
-      .expect(418, '', done);
+    var majorVersion = parseInt(process.versions.node, 10);
+    if (majorVersion >= 18) {
+      // In Node.js 18+ with llhttp, the parse error occurs before response
+      // headers are forwarded, so the proxy can set its own 404 status.
+      request(cors_anywhere)
+        .get('/' + bad_tcp_server_url)
+        .expect('Access-Control-Allow-Origin', '*')
+        .expect(404, done);
+    } else {
+      // The HTTP status can't be changed because the headers have already been sent.
+      request(cors_anywhere)
+        .get('/' + bad_tcp_server_url)
+        .expect('Access-Control-Allow-Origin', '*')
+        .expect(418, '', done);
+    }
   });
 
   it('Invalid header values', function(done) {
@@ -481,6 +496,7 @@ describe('Proxy errors', function() {
     }
     stopServer(function() {
       cors_anywhere = createServer({
+        allowPrivateIPs: true,
         // Setting an invalid header below in request(...).set(...) would trigger
         // a header validation error in superagent. So we use setHeaders to test
         // the attempt to proxy a request with invalid request headers.
@@ -567,7 +583,7 @@ describe('NODE_TLS_REJECT_UNAUTHORIZED', function() {
   }
 
   before(function() {
-    cors_anywhere = createServer({});
+    cors_anywhere = createServer({allowPrivateIPs: true});
     cors_anywhere_port = cors_anywhere.listen(0).address().port;
   });
   after(function(done) {
@@ -609,7 +625,7 @@ describe('NODE_TLS_REJECT_UNAUTHORIZED', function() {
   it('ignore certificate errors via NODE_TLS_REJECT_UNAUTHORIZED=0', function(done) {
     stopServer(function() {
       process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-      cors_anywhere = createServer({});
+      cors_anywhere = createServer({allowPrivateIPs: true});
       cors_anywhere_port = cors_anywhere.listen(0).address().port;
       request(cors_anywhere)
         .get('/https://127.0.0.1:' + bad_https_server_port)
@@ -622,6 +638,7 @@ describe('NODE_TLS_REJECT_UNAUTHORIZED', function() {
   it('respects certificate errors when httpProxyOptions.secure=true', function(done) {
     stopServer(function() {
       cors_anywhere = createServer({
+        allowPrivateIPs: true,
         httpProxyOptions: {
           secure: true,
         },

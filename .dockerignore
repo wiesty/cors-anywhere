@@ -1,0 +1,15 @@
+.git
+.github
+.eslintignore
+.eslintrc
+.gitignore
+.travis.yml
+coverage/
+node_modules/
+test/
+*.md
+*.log
+*.swp
+*.tmp
+demo.html
+Procfile
