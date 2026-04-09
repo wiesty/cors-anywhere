@@ -18,6 +18,8 @@ The easiest way to run this is via Docker:
 docker run -p 8080:8080 ghcr.io/wiesty/cors-anywhere
 ```
 
+Image: [ghcr.io/wiesty/cors-anywhere](https://github.com/wiesty/cors-anywhere/pkgs/container/cors-anywhere)
+
 Available environment variables:
 
 | Variable | Default | Description |
