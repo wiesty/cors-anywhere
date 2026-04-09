@@ -1,4 +1,3 @@
-/* eslint-env mocha */
 
 var createRateLimitChecker = require('../lib/rate-limit');
 

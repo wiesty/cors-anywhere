@@ -1,4 +1,3 @@
-/* eslint-env mocha */
 require('./setup');
 
 var createServer = require('../').createServer;
